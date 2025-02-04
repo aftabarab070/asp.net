@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Data;
@@ -13,12 +13,10 @@ namespace CarRental.Admin
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-            string sql = "SELECT * FROM customer WHERE status='APPROVED'";
-            SqlDataAdapter da = new SqlDataAdapter(sql, config.con);
-            DataTable dt = new DataTable();
-            da.Fill(dt);
-            CustomerDetails.DataSource = dt;
-            CustomerDetails.DataBind();
+            if (!IsPostBack)
+            {
+                BindCustomerDetails();
+            }
 
             if (Session["admin"] != null)
             {
@@ -33,6 +31,26 @@ namespace CarRental.Admin
         {
             Session.Clear();
             Response.Redirect("AdminLogin.aspx");
+        }
+        protected void btnDelete_Click(object sender, EventArgs e)
+        {
+            Button btn = (Button)sender;
+            int id = Convert.ToInt32(btn.CommandArgument);
+            string deleteQuery = "DELETE FROM customer WHERE id = " + id;
+            SqlDataAdapter da = new SqlDataAdapter(deleteQuery, config.con);
+            DataTable dt = new DataTable();
+            da.Fill(dt);
+            Response.Redirect("ApproveClient.aspx");
+            BindCustomerDetails();
+        }
+        private void BindCustomerDetails()
+        {
+            string selectQuery = "SELECT * FROM customer WHERE status='APPROVED'";
+            SqlDataAdapter da = new SqlDataAdapter(selectQuery, config.con);
+            DataTable dt = new DataTable();
+            da.Fill(dt);
+            CustomerDetails.DataSource = dt;
+            CustomerDetails.DataBind();
         }
     }
 }
