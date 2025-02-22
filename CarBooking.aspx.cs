@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
+using System.Data;
 using System.Linq;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using static System.Collections.Specialized.BitVector32;
+using System.Web.Routing;
 
 namespace CarRental
 {
@@ -15,7 +15,7 @@ namespace CarRental
         protected void Page_Load(object sender, EventArgs e)
         {
             string id = Request.QueryString["id"];
-            string sql = "SELECT * FROM cars WHERE car_id='"+id+"'";
+            string sql = "SELECT * FROM cars WHERE car_id='" + id + "'";
             SqlDataAdapter da = new SqlDataAdapter(sql, config.con);
             DataTable dt = new DataTable();
             da.Fill(dt);
@@ -36,7 +36,6 @@ namespace CarRental
                 mybookingbtn.Visible = false;
             }
         }
-        
         protected void logoutbtn_Click(object sender, EventArgs e)
         {
             Session.Clear();
@@ -44,34 +43,26 @@ namespace CarRental
             Response.Redirect("Index.aspx");
         }
         protected void countDates()
-        {
-            // Get the input values  
+        {       
             string startDateInput = startdate.Text;
-            string endDateInput = enddate.Text;
-
-            // Create DateTime objects from the input values  
+            string endDateInput = enddate.Text;         
             DateTime startDate = DateTime.ParseExact(startDateInput, "yyyy-MM-dd", null);
             DateTime endDate = DateTime.ParseExact(endDateInput, "yyyy-MM-dd", null);
-
-            // Calculate the difference in days  
-            int daysDifference = (endDate - startDate).Days + 1;
-
-            // Display the result in the daysDifference input field  
+            int daysDifference = (endDate - startDate).Days + 1; 
             duration.Text = daysDifference.ToString();
         }
-
         protected void rentbtn_Click(object sender, EventArgs e)
         {
             countDates();
-            if (Session["username"]  == null)
+
+            if (Session["username"] == null)
             {
-                Response.Write("<script>alert('User Not Login')</script>");
-                Response.Redirect("Login.aspx");
+                Page.ClientScript.RegisterStartupScript(this.GetType(), "myscript", "<script>alert('Please Login');window.location.replace('Login.aspx');</script>");
             }
             else
             {
                 string car_id = Request.QueryString["id"];
-                string sql = "SELECT car_amount,car_name FROM cars WHERE car_id = '"+car_id+"'";
+                string sql = "SELECT car_amount, car_name FROM cars WHERE car_id = '" + car_id + "'";
                 SqlDataAdapter da = new SqlDataAdapter(sql, config.con);
                 DataTable dt = new DataTable();
                 da.Fill(dt);
@@ -86,7 +77,7 @@ namespace CarRental
 
                 string user = Session["username"]?.ToString();
 
-                string sql1 = "SELECT * FROM users WHERE username = '"+user+"'";
+                string sql1 = "SELECT * FROM users WHERE username = '" + user + "'";
                 SqlDataAdapter da1 = new SqlDataAdapter(sql1, config.con);
                 DataTable dt1 = new DataTable();
                 da1.Fill(dt1);
@@ -106,7 +97,7 @@ namespace CarRental
                 }
 
                 string status = "Pending";
-                string mess = Message.Text;
+                string mess = Address.Text;
                 string pdate = startdate.Text;
                 string ddate = enddate.Text;
                 string days = duration.Text;
@@ -116,23 +107,47 @@ namespace CarRental
                 {
                     totalamount = car_amount * daysCount;
                 }
-                string sql3 = "INSERT INTO customer (car_id,car_name,car_amount, bookingnumber, fullname, username, email, mob, pdate, ddate, message, duration, tamount, status, postingdate) VALUES ('" + car_id + "','"+car_name+"','"+car_amount+"','" + bookingnumber + "', '" + fullname + "', '" + username + "', '" + email + "', '" + mob + "', '" + pdate + "', '" + ddate + "', '" + mess + "', '" + days + "', '" + totalamount.ToString() + "', '" + status + "',GETDATE())";
-                SqlDataAdapter da3 = new SqlDataAdapter(sql3,config.con);
-                DataTable dt3 = new DataTable();
-                da3.Fill(dt3);
 
-                string update = "UPDATE cars SET car_quantity = car_quantity - 1 WHERE car_id = '" + car_id + "'";
-                SqlDataAdapter da2 = new SqlDataAdapter(update, config.con);
-                DataTable dt2 = new DataTable();
-                da2.Fill(dt2);
+                if (DateTime.Parse(pdate) < DateTime.Parse(ddate))
+                {
+                    // Check if the car is already booked for the selected dates
+                    string checkBookingSql = "SELECT COUNT(*) FROM customer WHERE car_id = '" + car_id + "' AND ((pdate == '" + pdate + "'))";
+                    SqlDataAdapter daCheck = new SqlDataAdapter(checkBookingSql, config.con);
+                    DataTable dtCheck = new DataTable();
+                    daCheck.Fill(dtCheck);
 
-                Response.Redirect("MyBooking.aspx");
-                startdate.Text = string.Empty;
-                enddate.Text = string.Empty;
-                Message.Text = string.Empty;
+                    int bookingCount = Convert.ToInt32(dtCheck.Rows[0][0]);
 
-                
+                    if (bookingCount > 0)
+                    {
+                        // If car is already booked, show alert
+                        Response.Write("<script>alert('The car is already booked for the selected dates. Please choose different dates.');</script>");
+                    }
+                    else
+                    {
+                        // If not booked, proceed with booking
+                        string sql3 = "INSERT INTO customer (car_id, car_name, car_amount, bookingnumber, fullname, username, email, mobilenum, pdate, ddate, address, duration, total_amount, status, postingdate) VALUES ('" + car_id + "','" + car_name + "','" + car_amount + "','" + bookingnumber + "', '" + fullname + "', '" + username + "', '" + email + "', '" + mob + "', '" + pdate + "', '" + ddate + "', '" + mess + "', '" + days + "', '" + totalamount.ToString() + "', '" + status + "', GETDATE())";
+                        SqlDataAdapter da3 = new SqlDataAdapter(sql3, config.con);
+                        DataTable dt3 = new DataTable();
+                        da3.Fill(dt3);
+
+                        string update = "UPDATE cars SET car_quantity = car_quantity - 1 WHERE car_id = '" + car_id + "'";
+                        SqlDataAdapter da2 = new SqlDataAdapter(update, config.con);
+                        DataTable dt2 = new DataTable();
+                        da2.Fill(dt2);
+
+                        Page.ClientScript.RegisterStartupScript(this.GetType(), "myscript", "<script>alert('Car Booking Successful');window.location.replace('MyBooking.aspx');</script>");
+                        startdate.Text = string.Empty;
+                        enddate.Text = string.Empty;
+                        Address.Text = string.Empty;
+                    }
+                }
+                else
+                {
+                    Response.Write("<script>alert('Please Select Correct Date')</script>");
+                }
             }
         }
+
     }
 }
