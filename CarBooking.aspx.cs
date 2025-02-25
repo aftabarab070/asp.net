@@ -110,8 +110,8 @@ namespace CarRental
 
                 if (DateTime.Parse(pdate) < DateTime.Parse(ddate))
                 {
-                    // Check if the car is already booked for the selected dates
-                    string checkBookingSql = "SELECT COUNT(*) FROM customer WHERE car_id = '" + car_id + "' AND ((pdate == '" + pdate + "'))";
+                    // Check if the car is already booked for the selected dates and if the status is 'Pending' or 'Approved'
+                    string checkBookingSql = "SELECT COUNT(*) FROM customer WHERE car_id = '" + car_id + "' AND pdate = '" + pdate + "' AND (status = 'Pending' OR status = 'APPROVED')";
                     SqlDataAdapter daCheck = new SqlDataAdapter(checkBookingSql, config.con);
                     DataTable dtCheck = new DataTable();
                     daCheck.Fill(dtCheck);
@@ -120,12 +120,12 @@ namespace CarRental
 
                     if (bookingCount > 0)
                     {
-                        // If car is already booked, show alert
+                        // If car is already booked with a status of Pending or Approved, show alert
                         Response.Write("<script>alert('The car is already booked for the selected dates. Please choose different dates.');</script>");
                     }
                     else
                     {
-                        // If not booked, proceed with booking
+                        // If the car is not booked or status is not Pending or Approved, proceed with booking
                         string sql3 = "INSERT INTO customer (car_id, car_name, car_amount, bookingnumber, fullname, username, email, mobilenum, pdate, ddate, address, duration, total_amount, status, postingdate) VALUES ('" + car_id + "','" + car_name + "','" + car_amount + "','" + bookingnumber + "', '" + fullname + "', '" + username + "', '" + email + "', '" + mob + "', '" + pdate + "', '" + ddate + "', '" + mess + "', '" + days + "', '" + totalamount.ToString() + "', '" + status + "', GETDATE())";
                         SqlDataAdapter da3 = new SqlDataAdapter(sql3, config.con);
                         DataTable dt3 = new DataTable();
@@ -136,7 +136,10 @@ namespace CarRental
                         DataTable dt2 = new DataTable();
                         da2.Fill(dt2);
 
+                        // Booking is successful, redirect user
                         Page.ClientScript.RegisterStartupScript(this.GetType(), "myscript", "<script>alert('Car Booking Successful');window.location.replace('MyBooking.aspx');</script>");
+
+                        // Clear the input fields
                         startdate.Text = string.Empty;
                         enddate.Text = string.Empty;
                         Address.Text = string.Empty;
@@ -144,8 +147,10 @@ namespace CarRental
                 }
                 else
                 {
+                    // Alert if the dates are not valid (end date must be after start date)
                     Response.Write("<script>alert('Please Select Correct Date')</script>");
                 }
+
             }
         }
 
